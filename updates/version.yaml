@@ -3,3 +3,9 @@
     - update_table_offers_1.php
 1.0.1:
     - 'Add promotions list'
+1.0.2:
+    - 'Add promotion categories'
+    - migration102.php
+1.0.3:
+    - 'Add `promo_category_id` field'
+    - migration103.php

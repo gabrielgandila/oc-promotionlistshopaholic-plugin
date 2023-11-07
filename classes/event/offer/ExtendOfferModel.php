@@ -1,9 +1,11 @@
 <?php namespace Sprintsoft\PromotionsList\Classes\Event\Offer;
 
+use DB;
 use Lovata\Toolbox\Classes\Event\ModelHandler;
 
 use Lovata\Shopaholic\Models\Offer;
 use Lovata\Shopaholic\Classes\Item\OfferItem;
+use Lovata\Shopaholic\Classes\Item\CategoryItem;
 use Sprintsoft\PromotionsList\Classes\Store\OfferListStore;
 use Lovata\Shopaholic\Models\Price;
 
@@ -26,10 +28,12 @@ class ExtendOfferModel extends ModelHandler
         Offer::extend(function ($obOffer) {
             /** @var Offer $obOffer */
             $obOffer->fillable[] = 'is_promotion';
+            $obOffer->fillable[] = 'promo_category_id';
 
             $obOffer->addCachedField(['is_promotion']);
+            $obOffer->addCachedField(['promo_category_id']);
 
-            // $this->beofreSaveEvent($obOffer);
+            $this->beforeSaveEvent($obOffer);
         });
     }
 
@@ -41,17 +45,39 @@ class ExtendOfferModel extends ModelHandler
         $this->checkFieldChanges('is_promotion', OfferListStore::instance()->is_promotion);
     }
     
-    // Am dezactivat pentru ca am mutat functionalitatea in octav la sync dar pe viitor poate ne trebuie
-    // protected function beofreSaveEvent($model)
-    // {
-    //     $model->bindEvent('model.beforeSave', function () use ($model) {
-    //         if($model->price_value && $model->old_price_value > $model->price_value){
-    //             $model->is_promotion = true;
-    //         } else {
-    //             $model->is_promotion = false;
-    //         }
-    //     });
-    // }
+    /**
+     * Before save event handler
+     */
+    protected function beforeSaveEvent($model)
+    {
+        $model->bindEvent('model.beforeSave', function () use ($model) {
+            // We assign the promotion category id to the Offer if is_promotion is set
+            if($model->is_promotion && empty($model->promo_category_id)) {
+                $promoCategories = DB::table('lovata_shopaholic_offers_promo_categories')->get();
+                $promoCategsCollection = collect($promoCategories);
+    
+                $category = CategoryItem::make($model->product->category_id);
+                if(!empty($category)) {
+                    $mainCategory = $category;
+                    $promoCateg = null;
+                    while(($mainCategory->isNotEmpty() && $mainCategory->nest_depth > 0) || (!$promoCateg && !$mainCategory)) {
+                        $mainCategory = $mainCategory->parent;
+                        $promoCateg = $promoCategsCollection->where('category_id', $mainCategory->id)->first();
+                    }
+    
+                    if($promoCateg) {
+                        $model->promo_category_id = $promoCateg->id;
+                    } else {
+                        $model->promo_category_id = $promoCategsCollection->where('category_id', 108)->first()->id;
+                    }
+                } else {
+                    $model->promo_category_id = $promoCategsCollection->where('category_id', 108)->first()->id;
+                }
+            } else {
+                $model->promo_category_id = null;
+            }
+        });
+    }
 
     /**
      * After delete event handler
