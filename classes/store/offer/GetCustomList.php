@@ -17,7 +17,10 @@ class GetCustomList extends AbstractStoreWithoutParam
      */
     protected function getIDListFromDB() : array
     {
-        $arElementIDList = (array) Offer::where('is_promotion', true)->lists('product_id');
+        $arElementIDList = (array) Offer::where('is_promotion', true)
+        ->join('lovata_shopaholic_offers_promo_categories', 'lovata_shopaholic_offers_promo_categories.id', '=', 'lovata_shopaholic_offers.promo_category_id')
+        ->orderBy('lovata_shopaholic_offers_promo_categories.order')
+        ->lists('lovata_shopaholic_offers.product_id');
 
         return $arElementIDList;
     }

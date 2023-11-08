@@ -52,7 +52,7 @@ class ExtendOfferModel extends ModelHandler
     {
         $model->bindEvent('model.beforeSave', function () use ($model) {
             // We assign the promotion category id to the Offer if is_promotion is set
-            if($model->is_promotion && empty($model->promo_category_id)) {
+            if($model->is_promotion) {
                 $promoCategories = DB::table('lovata_shopaholic_offers_promo_categories')->get();
                 $promoCategsCollection = collect($promoCategories);
     
@@ -73,8 +73,6 @@ class ExtendOfferModel extends ModelHandler
                 } else {
                     $model->promo_category_id = $promoCategsCollection->where('category_id', 108)->first()->id;
                 }
-            } else {
-                $model->promo_category_id = null;
             }
         });
     }
